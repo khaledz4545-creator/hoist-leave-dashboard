@@ -150,8 +150,8 @@ footer{margin-top:26px;padding-top:14px;border-top:1px solid var(--line);
     <button class="btn" id="toggleLeave" type="button"><span class="plus" aria-hidden="true">+</span>تسجيل إجازة</button>
     <button class="btn ghost" id="toggleAdd" type="button"><span class="plus" aria-hidden="true">+</span>إضافة موظف</button>
     <button class="btn ghost" id="expBtn" type="button" title="حفظ نسخة من كل البيانات في ملف">تصدير نسخة</button>
-    <button class="btn ghost" id="impBtn" type="button" title="استعادة البيانات من ملف نسخة">استيراد نسخة</button>
-    <input type="file" id="impFile" accept="application/json,.json" hidden>
+    <button class="btn ghost" id="impBtn" type="button" title="استعادة البيانات من ملف نسخة JSON أو من ملف Excel محفوظ بصيغة CSV UTF-8">استيراد نسخة</button>
+    <input type="file" id="impFile" accept=".json,.csv,application/json,text/csv" hidden>
   </div>
   <div class="toast" id="toast" hidden></div>
 
@@ -600,6 +600,62 @@ footer{margin-top:26px;padding-top:14px;border-top:1px solid var(--line);
     return d.getFullYear()+'-'+p(d.getMonth()+1)+'-'+p(d.getDate()); }
   function cnt(o){ var n=0; for(var k in o) if(Object.prototype.hasOwnProperty.call(o,k)) n++; return n; }
 
+  // ===== قراءة CSV (يدعم الحقول المقتبسة والفواصل داخلها) =====
+  function parseCSV(text){
+    text=String(text).replace(/^﻿/,'');
+    var rows=[], row=[], cur='', q=false, i=0, ch, nx;
+    while(i<text.length){
+      ch=text.charAt(i);
+      if(q){
+        if(ch==='"'){ nx=text.charAt(i+1);
+          if(nx==='"'){ cur+='"'; i+=2; continue; }
+          q=false; i++; continue; }
+        cur+=ch; i++; continue;
+      }
+      if(ch==='"'){ q=true; i++; continue; }
+      if(ch===','||ch===';'){ row.push(cur); cur=''; i++; continue; }
+      if(ch==='\r'){ i++; continue; }
+      if(ch==='\n'){ row.push(cur); rows.push(row); row=[]; cur=''; i++; continue; }
+      cur+=ch; i++;
+    }
+    if(cur!==''||row.length){ row.push(cur); rows.push(row); }
+    return rows.filter(function(r){ return r.some(function(c){ return String(c).trim()!==''; }); });
+  }
+  var COLMAP={
+    'رقم الهوية':'nid','الهوية':'nid','nid':'nid','id':'nid',
+    'الاسم':'name','اسم الموظف':'name','name':'name',
+    'المسمى الوظيفي':'job','المسمى':'job','job':'job',
+    'مقر العمل':'loc','المقر':'loc','الموقع':'loc','loc':'loc',
+    'تاريخ المباشرة':'start','المباشرة':'start','start':'start',
+    'الرصيد السنوي':'ent','ent':'ent',
+    'رصيد مستهلك سابق':'used','المستهلك':'used','used':'used'
+  };
+  function normHead(h){
+    return String(h==null?'':h).replace(/^﻿/,'')
+      .replace(/[‎‏‪-‮]/g,'').trim().toLowerCase();
+  }
+  function csvToEmployees(text){
+    var rows=parseCSV(text);
+    if(rows.length<2) throw new Error('empty');
+    var head=rows[0].map(normHead), idx={};
+    for(var c=0;c<head.length;c++){
+      var k=COLMAP[head[c]];
+      if(k && idx[k]===undefined) idx[k]=c;
+    }
+    if(idx.nid===undefined||idx.name===undefined) throw new Error('cols');
+    var out={}, skipped=0;
+    for(var r=1;r<rows.length;r++){
+      var g=function(k,d){ var c=idx[k]; return c===undefined?d:String(rows[r][c]==null?'':rows[r][c]).trim(); };
+      var nid=g('nid','').replace(/\D/g,'');
+      var name=g('name','');
+      if(!/^\d{10}$/.test(nid)||!name){ skipped++; continue; }
+      var ent=Number(g('ent','21'))||21, used=Number(g('used','0'))||0;
+      out[nid]={nid:nid,name:name,job:g('job',''),loc:g('loc','')||'—',
+                start:g('start',''),ent:ent,used:used};
+    }
+    return {emp:out,skipped:skipped};
+  }
+
   var expBtn=$('expBtn'), impBtn=$('impBtn'), impFile=$('impFile');
   if(expBtn) expBtn.addEventListener('click',function(){
     try{
@@ -632,14 +688,30 @@ footer{margin-top:26px;padding-top:14px;border-top:1px solid var(--line);
     var rd=new FileReader();
     rd.onerror=function(){ say('تعذّرت قراءة الملف.','bad'); };
     rd.onload=function(){
+      var txt=String(rd.result), isCsv=/\.csv$/i.test(f.name||'');
       try{
-        var j=JSON.parse(String(rd.result));
-        if(!j||typeof j!=='object'||!j.employees||typeof j.employees!=='object') throw new Error('bad');
-        pending={employees:j.employees||{},leaves:(j.leaves&&typeof j.leaves==='object')?j.leaves:{}};
+        if(!isCsv){
+          var j=JSON.parse(txt);
+          if(!j||typeof j!=='object'||!j.employees||typeof j.employees!=='object') throw new Error('bad');
+          pending={employees:j.employees||{},leaves:(j.leaves&&typeof j.leaves==='object')?j.leaves:{}};
+          impBtn.textContent='تأكيد الاستبدال';
+          say('الملف يحتوي '+cnt(pending.employees)+' موظفًا و'+cnt(pending.leaves)+' إجازة. '+
+              'الاستيراد سيستبدل كل البيانات الموجودة على هذا الجهاز — اضغط «تأكيد الاستبدال» للمتابعة، أو حدّث الصفحة للإلغاء.','bad');
+          return;
+        }
+        var res=csvToEmployees(txt);
+        if(!cnt(res.emp)) throw new Error('empty');
+        pending={employees:res.emp,leaves:lsGet(LS_LV)};
         impBtn.textContent='تأكيد الاستبدال';
-        say('الملف يحتوي '+cnt(pending.employees)+' موظفًا و'+cnt(pending.leaves)+' إجازة. '+
-            'الاستيراد سيستبدل كل البيانات الموجودة على هذا الجهاز — اضغط «تأكيد الاستبدال» للمتابعة، أو حدّث الصفحة للإلغاء.','bad');
-      }catch(e){ pending=null; say('الملف غير صالح — يجب أن يكون ملف نسخة صادرًا من هذا التطبيق.','bad'); }
+        say('ملف Excel/CSV فيه '+cnt(res.emp)+' موظفًا'+
+            (res.skipped?(' (تم تجاهل '+res.skipped+' سطرًا ناقصًا أو رقم هويته ليس عشرة أرقام)'):'')+
+            '. سيستبدل قائمة الموظفين ويُبقي الإجازات المسجّلة — اضغط «تأكيد الاستبدال»، أو حدّث الصفحة للإلغاء.','bad');
+      }catch(e){
+        pending=null;
+        say(isCsv
+          ? 'تعذّرت قراءة ملف CSV — تأكد أن الصف الأول يحتوي العناوين: رقم الهوية، الاسم، المسمى الوظيفي، مقر العمل، تاريخ المباشرة، الرصيد السنوي، رصيد مستهلك سابق. واحفظه بصيغة CSV UTF-8.'
+          : 'الملف غير صالح — يجب أن يكون ملف نسخة صادرًا من هذا التطبيق، أو ملف CSV بامتداد ‎.csv‎.','bad');
+      }
     };
     rd.readAsText(f);
   });
