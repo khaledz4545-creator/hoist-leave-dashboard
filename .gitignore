@@ -1,0 +1,9 @@
+# لا تُرفع أي بيانات موظفين إطلاقًا
+*.json
+!manifest.webmanifest
+*backup*
+*.xlsx
+*.csv
+*.pdf
+.DS_Store
+Thumbs.db

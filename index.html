@@ -1,0 +1,657 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#6E7620">
+<meta name="description" content="لوحة رصيد الإجازات — شركة هويست إنفينيتي">
+<link rel="manifest" href="./manifest.webmanifest">
+<link rel="icon" href="./icon-192.png" sizes="192x192" type="image/png">
+<link rel="apple-touch-icon" href="./icon-192.png">
+<title>رصيد إجازات هويست</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&family=Tajawal:wght@500;700;800&display=swap">
+<style>
+/* لوحة تشغيلية: ملخّص، ثم جدول الأرصدة القابل للتوسيع، ثم لوحتا التسجيل والإضافة */
+:root{
+  --bg:#FBFBF7; --surface:#FFFFFF; --ink:#23261C; --muted:#6E7266;
+  --line:#E3E5DA; --accent:#6E7620; --accent-soft:#F1F4E4;
+  --ok:#2F6B46; --warn:#9A6B15; --crit:#8E2F2F; --on-accent:#FFFFFF;
+  --f-disp:"Tajawal","Noto Kufi Arabic",system-ui,sans-serif;
+  --f-body:"IBM Plex Sans Arabic","Segoe UI",system-ui,sans-serif;
+  color-scheme:light;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#15170F; --surface:#1D2017; --ink:#EDEFE4; --muted:#9BA08E;
+  --line:#2E3226; --accent:#B9C456; --accent-soft:#242818;
+  --ok:#6FBF8E; --warn:#D9A94E; --crit:#E2817D; --on-accent:#15170F; color-scheme:dark;}}
+:root[data-theme="dark"]{
+  --bg:#15170F; --surface:#1D2017; --ink:#EDEFE4; --muted:#9BA08E;
+  --line:#2E3226; --accent:#B9C456; --accent-soft:#242818;
+  --ok:#6FBF8E; --warn:#D9A94E; --crit:#E2817D; --on-accent:#15170F; color-scheme:dark;}
+
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--f-body);direction:rtl;
+  font-size:15px;line-height:1.6;-webkit-text-size-adjust:100%}
+.wrap{max-width:1180px;margin:0 auto;
+  padding-left:max(16px,env(safe-area-inset-left,0px));
+  padding-right:max(16px,env(safe-area-inset-right,0px));
+  padding-block:22px 56px}
+h1,h2,h3{font-family:var(--f-disp);margin:0;text-wrap:balance}
+
+header.top{display:flex;flex-wrap:wrap;gap:14px;align-items:flex-end;justify-content:space-between;
+  border-bottom:2px solid var(--accent);padding-bottom:14px;margin-bottom:22px}
+.brand{font-family:var(--f-disp);font-weight:800;font-size:1.55rem;letter-spacing:-.01em}
+.brand span{color:var(--accent)}
+.sub{color:var(--muted);font-size:.84rem;margin-top:3px}
+.asof{font-size:.8rem;color:var(--muted);font-variant-numeric:tabular-nums}
+.who{text-align:left}
+.who .nm{font-family:var(--f-disp);font-weight:700;font-size:1rem;color:var(--accent);
+  margin-bottom:2px;letter-spacing:-.01em}
+@media (max-width:520px){.who{text-align:right}}
+
+.tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(148px,1fr));gap:12px;margin-bottom:24px}
+.tile{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:14px 16px;min-width:0}
+.tile .k{font-size:.74rem;color:var(--muted);letter-spacing:.04em;margin-bottom:6px}
+.tile .v{font-family:var(--f-disp);font-weight:800;font-size:1.7rem;line-height:1.1;font-variant-numeric:tabular-nums}
+.tile .u{font-size:.72rem;color:var(--muted);margin-top:2px}
+.tile.hi .v{color:var(--accent)}
+
+.bar{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-bottom:14px}
+input,select,button,textarea{font:inherit;font-family:var(--f-body);color:var(--ink)}
+input[type=text],input[type=date],input[type=number],select,textarea{
+  background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:8px 11px;min-width:0;width:100%}
+input:focus-visible,select:focus-visible,button:focus-visible,textarea:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.search{flex:1 1 220px;width:auto!important}
+.bar select{width:auto}
+.btn{background:var(--accent);color:#fff;border:0;border-radius:8px;padding:9px 16px;font-weight:600;cursor:pointer}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .btn:not(.ghost):not(.danger){color:var(--on-accent)}}
+:root[data-theme="dark"] .btn:not(.ghost):not(.danger){color:var(--on-accent)}
+.btn.ghost{background:transparent;color:var(--accent);border:1px solid var(--accent);font-weight:700}
+.btn.tiny{padding:5px 10px;font-size:.78rem;border-radius:6px}
+.btn.danger{background:transparent;color:var(--crit);border:1px solid var(--crit)}
+.btn .plus{font-size:1.15em;line-height:1;font-weight:700;margin-inline-end:4px}
+
+.tablewrap{overflow-x:auto;border:1px solid var(--line);border-radius:10px;background:var(--surface)}
+table{border-collapse:collapse;width:100%;min-width:980px;font-size:.85rem}
+th,td{padding:9px 10px;text-align:center;border-bottom:1px solid var(--line);white-space:nowrap}
+th{background:var(--accent-soft);color:var(--accent);font-weight:700;font-size:.76rem;
+  position:sticky;top:0;cursor:pointer;user-select:none}
+th.name,td.name{text-align:right;white-space:normal;min-width:190px}
+tbody tr:last-child td{border-bottom:0}
+tr.emp{cursor:pointer}
+tr.emp:hover{background:var(--accent-soft)}
+td.num{font-variant-numeric:tabular-nums;font-weight:600}
+.pill{display:inline-block;padding:2px 9px;border-radius:999px;font-size:.72rem;font-weight:700;border:1px solid}
+.p-ok{color:var(--ok);border-color:var(--ok)}
+.p-warn{color:var(--warn);border-color:var(--warn)}
+.p-crit{color:var(--crit);border-color:var(--crit)}
+.meter{height:5px;border-radius:3px;background:var(--line);overflow:hidden;min-width:62px}
+.meter i{display:block;height:100%;background:var(--accent)}
+tr.hist td{background:var(--accent-soft);text-align:right;white-space:normal;padding:12px 16px}
+.hist h4{margin:0 0 8px;font-family:var(--f-disp);font-size:.9rem;color:var(--accent)}
+.hl{display:flex;flex-wrap:wrap;gap:8px 14px;align-items:center;padding:6px 0;border-bottom:1px dashed var(--line);font-size:.82rem}
+.hl:last-child{border-bottom:0}
+.hl .d{font-variant-numeric:tabular-nums;color:var(--muted)}
+.tag{display:inline-block;padding:1px 8px;border-radius:999px;font-size:.7rem;font-weight:700;
+  border:1px solid var(--line);background:var(--surface)}
+.tag.ded{border-color:var(--accent);color:var(--accent)}
+
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:18px;margin-top:22px}
+.panel h2{font-size:1.02rem;margin-bottom:4px}
+.panel p.hint{color:var(--muted);font-size:.8rem;margin:0 0 14px}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px}
+.fld{display:flex;flex-direction:column;gap:5px;min-width:0}
+.fld label{font-size:.76rem;color:var(--muted);font-weight:600}
+.err{color:var(--crit);font-size:.82rem;margin-top:10px;min-height:1.2em}
+.okmsg{color:var(--ok);font-size:.82rem;margin-top:10px;min-height:1.2em;font-weight:600}
+.calc{background:var(--accent-soft);border:1px solid var(--line);border-radius:8px;padding:10px 14px;
+  margin-top:12px;font-size:.84rem;line-height:1.9}
+.calc b{color:var(--accent)}
+
+.empty{padding:38px 18px;text-align:center;color:var(--muted)}
+.empty b{display:block;color:var(--ink);font-family:var(--f-disp);font-size:1.05rem;margin-bottom:6px}
+.notes{margin-top:24px;font-size:.78rem;color:var(--muted);line-height:1.8}
+.notes b{color:var(--ink)}
+.notes ol{padding-inline-start:18px;margin:8px 0 0}
+footer{margin-top:26px;padding-top:14px;border-top:1px solid var(--line);
+  color:var(--muted);font-size:.74rem;display:flex;flex-wrap:wrap;gap:8px;justify-content:space-between}
+@media (max-width:520px){.tile .v{font-size:1.4rem}.brand{font-size:1.26rem}}
+.toast{margin:10px 0 0;padding:10px 14px;border-radius:10px;font-size:.84rem;
+  border:1px solid var(--line);background:var(--accent-soft);color:var(--ink)}
+.toast[data-kind="bad"]{background:#FBEDED;border-color:#E6C9C9;color:var(--crit)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .toast[data-kind="bad"]{background:#2A1A1A;border-color:#4A2C2C;color:var(--crit)}}
+@media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <div>
+      <div class="brand">رصيد الإجازات — <span>هويست إنفينيتي</span></div>
+      <div class="sub">تسجيل الإجازات واحتساب الأرصدة وفق المادة (109) من نظام العمل</div>
+    </div>
+    <div class="who">
+      <div class="nm">خالد راشد الزهراني</div>
+      <div class="asof">محدَّث حتى <span id="asof">—</span></div>
+    </div>
+  </header>
+
+  <section class="tiles" id="tiles" aria-label="ملخص"></section>
+
+  <div class="bar">
+    <input class="search" type="text" id="q" placeholder="ابحث بالاسم أو رقم الهوية أو المسمى أو المقر" autocomplete="off">
+    <select id="loc"><option value="">كل المواقع</option></select>
+    <select id="st">
+      <option value="">كل الحالات</option>
+      <option value="ok">رصيد متاح</option>
+      <option value="warn">رصيد مرتفع</option>
+      <option value="crit">تجاوز الرصيد</option>
+    </select>
+    <button class="btn" id="toggleLeave" type="button"><span class="plus" aria-hidden="true">+</span>تسجيل إجازة</button>
+    <button class="btn ghost" id="toggleAdd" type="button"><span class="plus" aria-hidden="true">+</span>إضافة موظف</button>
+    <button class="btn ghost" id="expBtn" type="button" title="حفظ نسخة من كل البيانات في ملف">تصدير نسخة</button>
+    <button class="btn ghost" id="impBtn" type="button" title="استعادة البيانات من ملف نسخة">استيراد نسخة</button>
+    <input type="file" id="impFile" accept="application/json,.json" hidden>
+  </div>
+  <div class="toast" id="toast" hidden></div>
+
+  <section class="panel" id="leavePanel" hidden>
+    <h2>تسجيل إجازة</h2>
+    <p class="hint">اختر الموظف ونوع الإجازة وتاريخ بدايتها وعدد أيامها. الإجازة الاعتيادية والاضطرارية تُخصمان من الرصيد السنوي؛ المرضية والوضع والزواج والوفاة وبدون أجر لا تُخصم منه.</p>
+    <div class="grid">
+      <div class="fld"><label for="l-emp">الموظف</label><select id="l-emp"></select></div>
+      <div class="fld"><label for="l-type">نوع الإجازة</label><select id="l-type"></select></div>
+      <div class="fld"><label for="l-start">تاريخ البداية</label><input type="date" id="l-start"></div>
+      <div class="fld"><label for="l-days">عدد الأيام</label><input type="number" id="l-days" min="0.5" step="0.5" value="1"></div>
+      <div class="fld"><label for="l-note">ملاحظة / رقم الطلب</label><input type="text" id="l-note" placeholder="اختياري"></div>
+    </div>
+    <div class="calc" id="l-calc">اختر موظفًا لعرض أثر الإجازة على رصيده.</div>
+    <div class="err" id="l-err"></div>
+    <div class="bar" style="margin-top:6px">
+      <button class="btn" id="l-save" type="button">حفظ الإجازة</button>
+      <button class="btn ghost" id="l-cancel" type="button">إلغاء</button>
+    </div>
+  </section>
+
+  <div class="tablewrap">
+    <table>
+      <thead><tr>
+        <th class="name" data-s="name">الموظف</th>
+        <th data-s="nid">رقم الهوية</th>
+        <th data-s="job">المسمى الوظيفي</th>
+        <th data-s="loc">المقر</th>
+        <th data-s="start">المباشرة</th>
+        <th data-s="svc">مدة الخدمة</th>
+        <th data-s="ent">الرصيد السنوي</th>
+        <th data-s="acc">المستحق تراكميًا</th>
+        <th data-s="used">المستخدم</th>
+        <th data-s="bal">الرصيد المتبقي</th>
+        <th>الاستهلاك</th>
+        <th>إجراء</th>
+      </tr></thead>
+      <tbody id="rows"></tbody>
+    </table>
+    <div class="empty" id="empty"><b>جارٍ تحميل السجل…</b>لحظات.</div>
+  </div>
+
+  <section class="panel" id="addPanel" hidden>
+    <h2>إضافة موظف</h2>
+    <p class="hint">الرصيد السنوي الافتراضي 21 يومًا، ويرتفع تلقائيًا إلى 30 بعد إتمام خمس سنوات خدمة متصلة.</p>
+    <div class="grid">
+      <div class="fld"><label for="f-name">الاسم الرباعي</label><input type="text" id="f-name"></div>
+      <div class="fld"><label for="f-nid">رقم الهوية</label><input type="text" id="f-nid" inputmode="numeric" maxlength="10"></div>
+      <div class="fld"><label for="f-job">المسمى الوظيفي</label><input type="text" id="f-job"></div>
+      <div class="fld"><label for="f-loc">مقر العمل</label><input type="text" id="f-loc" value="الرياض"></div>
+      <div class="fld"><label for="f-start">تاريخ المباشرة</label><input type="date" id="f-start"></div>
+      <div class="fld"><label for="f-ent">الرصيد السنوي (يوم)</label><input type="number" id="f-ent" value="21" min="21" max="60"></div>
+      <div class="fld"><label for="f-used">رصيد مستهلك سابق (يوم)</label><input type="number" id="f-used" value="0" min="0" step="0.5"></div>
+    </div>
+    <div class="err" id="err"></div>
+    <div class="bar" style="margin-top:6px">
+      <button class="btn" id="save" type="button">حفظ الموظف</button>
+      <button class="btn ghost" id="cancel" type="button">إلغاء</button>
+    </div>
+  </section>
+
+  <section class="notes">
+    <b>قواعد الاحتساب</b>
+    <ol>
+      <li>الرصيد السنوي 21 يومًا عن كل عام خدمة، ويزاد إلى 30 يومًا بعد إتمام خمس سنوات متصلة — المادة (109).</li>
+      <li>«المستحق تراكميًا» = أرصدة سنوات الخدمة المكتملة + نسبة ما مضى من السنة الحالية.</li>
+      <li>«المستخدم» = الرصيد المستهلك المسجَّل عند إنشاء السجل + مجموع الإجازات المخصومة المسجَّلة بعده.</li>
+      <li>الإجازة المرضية تخضع للمادة (117) ولها حسابها المستقل، فلا تُخصم من الرصيد السنوي. وكذلك الوضع والزواج والوفاة والإجازة بدون أجر.</li>
+      <li>الإجازة تُمنح في سنة استحقاقها ولا يجوز للعامل التنازل عنها، وللشركة تحديد موعدها وتأجيلها بحدود المادة (110).</li>
+      <li>عند انتهاء الخدمة يُعوَّض العامل نقدًا عن رصيده غير المستعمل — المادة (111).</li>
+    </ol>
+  </section>
+
+  <footer>
+    <span>إدارة الموارد البشرية — شركة هويست إنفينيتي</span>
+    <span id="count">—</span>
+  </footer>
+</div>
+
+<script>
+(function(){
+  "use strict";
+  var TODAY = new Date();
+  var $=function(id){ return document.getElementById(id); };
+  var rowsEl=$('rows'), emptyEl=$('empty'), tilesEl=$('tiles'), countEl=$('count'),
+      qEl=$('q'), locEl=$('loc'), stEl=$('st');
+  var EMP=[], LV=[], db=null, sortKey='bal', sortDir=1, ready=false, openNid=null;
+
+  // نوع الإجازة: هل تُخصم من الرصيد السنوي؟
+  var TYPES=[
+    {k:'اعتيادية (سنوية)', d:true},
+    {k:'اضطرارية', d:true},
+    {k:'مرضية', d:false},
+    {k:'وضع', d:false},
+    {k:'زواج', d:false},
+    {k:'وفاة', d:false},
+    {k:'بدون أجر', d:false},
+    {k:'أخرى', d:false}
+  ];
+  function deducts(t){ for(var i=0;i<TYPES.length;i++) if(TYPES[i].k===t) return TYPES[i].d; return false; }
+
+  $('asof').textContent = fmt(TODAY);
+  $('l-type').innerHTML = TYPES.map(function(t){
+    return '<option value="'+esc(t.k)+'">'+esc(t.k)+(t.d?'':' — لا تُخصم')+'</option>'; }).join('');
+
+  function fmt(d){ if(!(d instanceof Date)||isNaN(d))return '—';
+    return String(d.getDate()).padStart(2,'0')+'/'+String(d.getMonth()+1).padStart(2,'0')+'/'+d.getFullYear(); }
+  function parse(s){ if(!s) return null; var d=new Date(s+'T00:00:00'); return isNaN(d)?null:d; }
+  function addDays(d,n){ var x=new Date(d.getTime()); x.setDate(x.getDate()+n); return x; }
+  function addYears(d,n){ var x=new Date(d.getTime()); x.setFullYear(x.getFullYear()+n); return x; }
+  function round1(n){ return Math.round(n*10)/10; }
+  function esc(s){ return String(s==null?'':s).replace(/[&<>"']/g,function(c){
+    return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];}); }
+
+  function norm(s){
+    return String(s==null?'':s)
+      .replace(/[ً-ْـ]/g,'')
+      .replace(/[آأإٱ]/g,'ا')
+      .replace(/ة/g,'ه').replace(/ى/g,'ي')
+      .replace(/ؤ/g,'و').replace(/ئ/g,'ي')
+      .replace(/[\s‏‎_\-]/g,'').toLowerCase();
+  }
+  function hit(r,q){
+    var hay=norm(r.name)+norm(r.nid)+norm(r.job)+norm(r.loc);
+    var parts=q.split(/\s+/).filter(Boolean);
+    for(var i=0;i<parts.length;i++){ if(hay.indexOf(norm(parts[i]))<0) return false; }
+    return true;
+  }
+
+  function service(start){
+    if(!start) return {y:0,m:0,txt:'—'};
+    var y=TODAY.getFullYear()-start.getFullYear(), m=TODAY.getMonth()-start.getMonth();
+    if(TODAY.getDate()<start.getDate()) m--;
+    if(m<0){ y--; m+=12; }
+    if(y<0) return {y:0,m:0,txt:'لم تبدأ'};
+    var p=[]; if(y) p.push(y+' سنة'); if(m) p.push(m+' شهر');
+    return {y:y,m:m,txt:p.length?p.join(' و'):'أقل من شهر'};
+  }
+  function accrued(start, base){
+    if(!start || start>TODAY) return 0;
+    var total=0;
+    for(var y=0;y<80;y++){
+      var a=addYears(start,y), b=addYears(start,y+1);
+      if(a>=TODAY) break;
+      var ent=(y>=5)?Math.max(30,base):base;
+      total += (b<=TODAY) ? ent : ent*((TODAY-a)/(b-a));
+    }
+    return total;
+  }
+  function usedOf(nid){
+    var s=0;
+    for(var i=0;i<LV.length;i++){ if(LV[i].nid===nid && deducts(LV[i].type)) s+=Number(LV[i].days)||0; }
+    return s;
+  }
+  function compute(r){
+    var start=parse(r.start), base=Number(r.ent)||21;
+    var opening=Number(r.used)||0, logged=usedOf(r.nid), used=round1(opening+logged);
+    var svc=service(start), ent=(svc.y>=5?Math.max(30,base):base), acc=round1(accrued(start,base));
+    var bal=round1(acc-used);
+    return {start:start,svc:svc,ent:ent,acc:acc,used:used,opening:opening,logged:round1(logged),bal:bal,
+            state: bal<0?'crit':(bal>=ent?'warn':'ok'),
+            pct: acc>0?Math.max(0,Math.min(100,(used/acc)*100)):0,
+            svcSort:(svc.y*12+svc.m)};
+  }
+
+  function tiles(){
+    var acc=0,used=0,bal=0,five=0,over=0;
+    EMP.forEach(function(r){ var c=compute(r); acc+=c.acc; used+=c.used; bal+=c.bal;
+      if(c.svc.y>=5) five++; if(c.bal<0) over++; });
+    var t=[['عدد الموظفين',EMP.length,'',false],
+           ['المستحق تراكميًا',round1(acc),'يوم',true],
+           ['المستخدم',round1(used),'يوم',false],
+           ['الرصيد المتبقي',round1(bal),'يوم',true],
+           ['إجازات مسجّلة',LV.length,'سجل',false],
+           ['تجاوزوا 5 سنوات',five,'رصيدهم 30 يومًا',false],
+           ['تجاوزوا رصيدهم',over,'يحتاج معالجة',false]];
+    tilesEl.innerHTML=t.map(function(x){
+      return '<div class="tile'+(x[3]?' hi':'')+'"><div class="k">'+x[0]+'</div><div class="v">'+x[1]+'</div><div class="u">'+x[2]+'</div></div>';
+    }).join('');
+  }
+
+  function histRow(nid){
+    var mine=LV.filter(function(l){ return l.nid===nid; })
+      .sort(function(a,b){ return (b.start||'').localeCompare(a.start||''); });
+    var inner = mine.length ? mine.map(function(l){
+      var s=parse(l.start), e=s?addDays(s,(Number(l.days)||1)-1):null;
+      return '<div class="hl">'+
+        '<span class="tag'+(deducts(l.type)?' ded':'')+'">'+esc(l.type)+'</span>'+
+        '<b>'+esc(l.days)+' يوم</b>'+
+        '<span class="d">'+fmt(s)+(e&&(Number(l.days)||1)>1?' — '+fmt(e):'')+'</span>'+
+        (l.note?'<span class="d">· '+esc(l.note)+'</span>':'')+
+        '<button class="btn tiny danger" data-dl="'+esc(l.id)+'" type="button">حذف</button>'+
+      '</div>';
+    }).join('') : '<div class="hl"><span class="d">لا توجد إجازات مسجّلة لهذا الموظف.</span></div>';
+    return '<tr class="hist"><td colspan="12"><h4>سجل إجازات الموظف</h4>'+inner+'</td></tr>';
+  }
+
+  function render(){
+    var q=qEl.value.trim(), fl=locEl.value, fs=stEl.value, list=EMP.slice();
+
+    var locs=[]; EMP.forEach(function(r){ if(r.loc && locs.indexOf(r.loc)<0) locs.push(r.loc); });
+    locs.sort(); var cur=locEl.value;
+    locEl.innerHTML='<option value="">كل المواقع</option>'+locs.map(function(l){
+      return '<option value="'+esc(l)+'">'+esc(l)+'</option>';}).join('');
+    locEl.value = locs.indexOf(cur)>=0?cur:'';
+
+    if(q) list=list.filter(function(r){ return hit(r,q); });
+    if(fl) list=list.filter(function(r){ return r.loc===fl; });
+    if(fs) list=list.filter(function(r){ return compute(r).state===fs; });
+
+    list.sort(function(a,b){
+      var ca=compute(a), cb=compute(b), x, y;
+      if(['name','job','loc','nid'].indexOf(sortKey)>=0){
+        return String(a[sortKey]||'').localeCompare(String(b[sortKey]||''),'ar')*sortDir; }
+      if(sortKey==='start'){ x=ca.start?ca.start.getTime():0; y=cb.start?cb.start.getTime():0; }
+      else if(sortKey==='svc'){ x=ca.svcSort; y=cb.svcSort; }
+      else { x=ca[sortKey]; y=cb[sortKey]; }
+      return (x-y)*sortDir;
+    });
+
+    tiles();
+    countEl.textContent = list.length===EMP.length ? EMP.length+' موظف'
+      : list.length+' من '+EMP.length+' موظف';
+
+    // قائمة الموظفين في نموذج التسجيل
+    var sel=$('l-emp'), keep=sel.value;
+    sel.innerHTML='<option value="">— اختر الموظف —</option>'+
+      EMP.slice().sort(function(a,b){ return String(a.name||'').localeCompare(String(b.name||''),'ar'); })
+        .map(function(r){ return '<option value="'+esc(r.nid)+'">'+esc(r.name)+' — '+esc(r.nid)+'</option>'; }).join('');
+    sel.value=keep;
+
+    if(!list.length){
+      rowsEl.innerHTML=''; emptyEl.hidden=false;
+      emptyEl.innerHTML = EMP.length
+        ? '<b>لا نتائج مطابقة</b>جرّب كلمة بحث أخرى أو أعد ضبط عوامل التصفية.'
+        : (ready?'<b>السجل فارغ</b>أضف أول موظف من زر «إضافة موظف».':'<b>جارٍ تحميل السجل…</b>لحظات.');
+      return;
+    }
+    emptyEl.hidden=true;
+
+    rowsEl.innerHTML = list.map(function(r){
+      var c=compute(r);
+      var pill = c.state==='crit'?'<span class="pill p-crit">تجاوز</span>'
+               : c.state==='warn'?'<span class="pill p-warn">مرتفع</span>'
+               : '<span class="pill p-ok">متاح</span>';
+      var tr='<tr class="emp" data-nid="'+esc(r.nid)+'">'+
+        '<td class="name">'+esc(r.name)+'</td>'+
+        '<td class="num">'+esc(r.nid)+'</td>'+
+        '<td>'+esc(r.job||'—')+'</td>'+
+        '<td>'+esc(r.loc||'—')+'</td>'+
+        '<td class="num">'+fmt(c.start)+'</td>'+
+        '<td>'+esc(c.svc.txt)+'</td>'+
+        '<td class="num">'+c.ent+'</td>'+
+        '<td class="num">'+c.acc+'</td>'+
+        '<td class="num">'+c.used+'</td>'+
+        '<td class="num">'+c.bal+' '+pill+'</td>'+
+        '<td><div class="meter"><i style="width:'+c.pct.toFixed(0)+'%"></i></div></td>'+
+        '<td><button class="btn tiny danger" data-del="'+esc(r.nid)+'" type="button">حذف</button></td></tr>';
+      return tr + (openNid===r.nid ? histRow(r.nid) : '');
+    }).join('');
+  }
+
+  function calcPreview(){
+    var nid=$('l-emp').value, box=$('l-calc');
+    if(!nid){ box.textContent='اختر موظفًا لعرض أثر الإجازة على رصيده.'; return; }
+    var r=EMP.filter(function(x){return x.nid===nid;})[0];
+    if(!r){ box.textContent='—'; return; }
+    var c=compute(r), days=Number($('l-days').value)||0, t=$('l-type').value, s=parse($('l-start').value);
+    var e=s?addDays(s,Math.max(1,Math.ceil(days))-1):null;
+    var after = deducts(t) ? round1(c.bal-days) : c.bal;
+    box.innerHTML='الرصيد الحالي: <b>'+c.bal+'</b> يوم'+
+      (s?' · من <b>'+fmt(s)+'</b> إلى <b>'+fmt(e)+'</b> · العودة <b>'+fmt(addDays(e,1))+'</b>':'')+
+      '<br>'+(deducts(t)
+        ? 'تُخصم <b>'+days+'</b> يوم · الرصيد بعدها: <b>'+after+'</b> يوم'+(after<0?' — <span style="color:var(--crit);font-weight:700">تجاوز الرصيد</span>':'')
+        : '<b>'+esc(t)+'</b> لا تُخصم من الرصيد السنوي · يبقى <b>'+c.bal+'</b> يوم');
+  }
+
+  [qEl,locEl,stEl].forEach(function(el){ el.addEventListener('input',render); });
+  ['l-emp','l-days','l-type','l-start'].forEach(function(id){
+    $(id).addEventListener('input',calcPreview); $(id).addEventListener('change',calcPreview); });
+
+  document.querySelectorAll('th[data-s]').forEach(function(th){
+    th.addEventListener('click',function(){
+      var k=th.getAttribute('data-s');
+      if(sortKey===k) sortDir*=-1; else { sortKey=k; sortDir=(['name','job','loc'].indexOf(k)>=0)?1:-1; }
+      render();
+    });
+  });
+
+  $('toggleLeave').addEventListener('click',function(){
+    var p=$('leavePanel'); p.hidden=!p.hidden;
+    if(!p.hidden){ $('l-err').textContent=''; calcPreview(); $('l-emp').focus(); }
+  });
+  $('l-cancel').addEventListener('click',function(){ $('leavePanel').hidden=true; $('l-err').textContent=''; });
+  $('toggleAdd').addEventListener('click',function(){
+    var p=$('addPanel'); p.hidden=!p.hidden; if(!p.hidden) $('f-name').focus();
+  });
+  $('cancel').addEventListener('click',function(){ $('addPanel').hidden=true; $('err').textContent=''; });
+
+  // ===== حفظ إجازة =====
+  $('l-save').addEventListener('click',function(){
+    var err=$('l-err'); err.textContent='';
+    var nid=$('l-emp').value, type=$('l-type').value,
+        start=$('l-start').value, days=Number($('l-days').value)||0, note=$('l-note').value.trim();
+    if(!nid){ err.textContent='اختر الموظف.'; return; }
+    if(!parse(start)){ err.textContent='اختر تاريخ بداية الإجازة.'; return; }
+    if(!(days>0)){ err.textContent='عدد الأيام يجب أن يكون أكبر من صفر.'; return; }
+    var r=EMP.filter(function(x){return x.nid===nid;})[0];
+    var id = nid+'-'+start.replace(/-/g,'')+'-'+Date.now().toString(36);
+    var rec={id:id,nid:nid,name:(r&&r.name)||'',type:type,start:start,days:days,note:note,
+             at:new Date().toISOString()};
+    LV.push(rec); openNid=nid; render(); calcPreview();
+    $('l-note').value=''; $('l-days').value=1;
+    if(db) db.collection('leaves').doc(id).set(rec).catch(function(){
+      err.textContent='تعذّر الحفظ على السجل المشترك — أعد المحاولة.'; });
+    else err.textContent='حُفظت محليًا فقط — السجل المشترك غير متاح في هذا العرض.';
+  });
+
+  // ===== حفظ موظف =====
+  $('save').addEventListener('click',function(){
+    var v=function(id){ return $(id).value.trim(); }, err=$('err'); err.textContent='';
+    var name=v('f-name'), nid=v('f-nid'), job=v('f-job'), loc=v('f-loc'),
+        start=v('f-start'), ent=Number(v('f-ent'))||21, used=Number(v('f-used'))||0;
+    if(!name){ err.textContent='اكتب اسم الموظف.'; return; }
+    if(!/^\d{10}$/.test(nid)){ err.textContent='رقم الهوية يجب أن يكون عشرة أرقام.'; return; }
+    if(EMP.some(function(r){return r.nid===nid;})){ err.textContent='هذا الرقم مسجّل بالفعل.'; return; }
+    if(!parse(start)){ err.textContent='اختر تاريخ المباشرة.'; return; }
+    if(parse(start)>TODAY){ err.textContent='تاريخ المباشرة في المستقبل.'; return; }
+    var rec={nid:nid,name:name,job:job,loc:loc,start:start,ent:ent,used:used};
+    EMP.push(rec); render(); $('addPanel').hidden=true;
+    ['f-name','f-nid','f-job','f-start'].forEach(function(id){ $(id).value=''; });
+    $('f-ent').value=21; $('f-used').value=0;
+    if(db) db.collection('employees').doc(nid).set(rec).catch(function(){
+      err.textContent='تعذّر الحفظ على السجل المشترك.'; $('addPanel').hidden=false; });
+  });
+
+  // ===== نقرات الجدول =====
+  rowsEl.addEventListener('click',function(e){
+    var dl=e.target.closest('[data-dl]');
+    if(dl){
+      e.stopPropagation();
+      if(dl.dataset.confirm){
+        var lid=dl.getAttribute('data-dl');
+        LV=LV.filter(function(l){ return l.id!==lid; }); render(); calcPreview();
+        if(db) db.collection('leaves').doc(lid).delete().catch(function(){});
+      } else {
+        dl.dataset.confirm='1'; dl.textContent='تأكيد';
+        setTimeout(function(){ if(dl.isConnected){ delete dl.dataset.confirm; dl.textContent='حذف'; } },4000);
+      }
+      return;
+    }
+    var b=e.target.closest('[data-del]');
+    if(b){
+      e.stopPropagation();
+      if(b.dataset.confirm){
+        var nid=b.getAttribute('data-del');
+        EMP=EMP.filter(function(r){ return r.nid!==nid; });
+        if(openNid===nid) openNid=null;
+        render();
+        if(db) db.collection('employees').doc(nid).delete().catch(function(){});
+      } else {
+        b.dataset.confirm='1'; b.textContent='تأكيد الحذف';
+        setTimeout(function(){ if(b.isConnected){ delete b.dataset.confirm; b.textContent='حذف'; } },4000);
+      }
+      return;
+    }
+    var tr=e.target.closest('tr.emp');
+    if(tr){ var n=tr.getAttribute('data-nid'); openNid = (openNid===n)?null:n; render(); }
+  });
+
+  render();
+
+  // ===== السجل المشترك =====
+  var timer=setTimeout(function(){ ready=true; render(); },10000);
+  function take(snap){
+    var out=[];
+    try{
+      (snap && snap.docs ? snap.docs : []).forEach(function(doc){
+        if(doc && doc.exists===false) return;
+        var x=(doc && doc.data && doc.data()) || {};
+        out.push(x);
+      });
+    }catch(e){}
+    return out;
+  }
+
+  // ===== طبقة التخزين المحلي (بديل قاعدة بيانات Claude) =====
+  var LS_EMP='hoist.leave.employees', LS_LV='hoist.leave.leaves';
+  function lsGet(k){ try{ var s=localStorage.getItem(k); var o=s?JSON.parse(s):{}; return (o&&typeof o==='object')?o:{}; }catch(e){ return {}; } }
+  function lsSet(k,o){ try{ localStorage.setItem(k,JSON.stringify(o)); return true; }catch(e){ return false; } }
+  function keyOf(n){ return n==='employees'?LS_EMP:LS_LV; }
+  function LocalDB(){
+    var subs={};
+    function snapOf(n){
+      var o=lsGet(keyOf(n)), docs=[];
+      for(var id in o){ if(!Object.prototype.hasOwnProperty.call(o,id)) continue;
+        docs.push({exists:true,id:id,data:(function(v){ return function(){ return v; }; })(o[id])}); }
+      return {docs:docs};
+    }
+    function fire(n){ var list=subs[n]||[];
+      for(var i=0;i<list.length;i++){ try{ list[i](snapOf(n)); }catch(e){} } }
+    try{ window.addEventListener('storage',function(e){
+      if(e.key===LS_EMP) fire('employees'); else if(e.key===LS_LV) fire('leaves'); }); }catch(e){}
+    return {
+      reload:function(){ fire('employees'); fire('leaves'); },
+      collection:function(n){
+        return {
+          doc:function(id){ return {
+            set:function(rec){ var o=lsGet(keyOf(n)); o[id]=rec; var ok=lsSet(keyOf(n),o); fire(n);
+              return ok?Promise.resolve():Promise.reject(new Error('storage')); },
+            delete:function(){ var o=lsGet(keyOf(n)); delete o[id]; var ok=lsSet(keyOf(n),o); fire(n);
+              return ok?Promise.resolve():Promise.reject(new Error('storage')); }
+          }; },
+          onSnapshot:function(cb,err){ (subs[n]=subs[n]||[]).push(cb);
+            try{ cb(snapOf(n)); }catch(e){ if(err) err(e); }
+            return function(){}; }
+        };
+      }
+    };
+  }
+
+  Promise.resolve(LocalDB())
+    .then(function(d){
+      if(!d){ clearTimeout(timer); ready=true; render(); return; }
+      db=d;
+      d.collection('employees').onSnapshot(function(snap){
+        clearTimeout(timer); ready=true;
+        EMP=take(snap).filter(function(x){ return x.nid; });
+        render(); calcPreview();
+      }, function(){ clearTimeout(timer); ready=true; render(); });
+      d.collection('leaves').onSnapshot(function(snap){
+        LV=take(snap).filter(function(x){ return x.id && x.nid; });
+        render(); calcPreview();
+      }, function(){});
+    })
+    .catch(function(){ clearTimeout(timer); ready=true; render(); });
+  // ===== نسخ احتياطي: تصدير واستيراد =====
+  var toastEl=$('toast'), toastT=null;
+  function say(msg,kind){
+    if(!toastEl) return;
+    toastEl.textContent=msg; toastEl.setAttribute('data-kind',kind||'ok'); toastEl.hidden=false;
+    if(toastT) clearTimeout(toastT);
+    toastT=setTimeout(function(){ toastEl.hidden=true; },6000);
+  }
+  function stamp(){ var d=new Date(), p=function(n){ return (n<10?'0':'')+n; };
+    return d.getFullYear()+'-'+p(d.getMonth()+1)+'-'+p(d.getDate()); }
+  function cnt(o){ var n=0; for(var k in o) if(Object.prototype.hasOwnProperty.call(o,k)) n++; return n; }
+
+  var expBtn=$('expBtn'), impBtn=$('impBtn'), impFile=$('impFile');
+  if(expBtn) expBtn.addEventListener('click',function(){
+    try{
+      var emp=lsGet(LS_EMP), lv=lsGet(LS_LV);
+      var payload={app:'hoist-leave',version:1,exportedAt:new Date().toISOString(),employees:emp,leaves:lv};
+      var blob=new Blob([JSON.stringify(payload,null,2)],{type:'application/json'});
+      var url=URL.createObjectURL(blob), a=document.createElement('a');
+      a.href=url; a.download='hoist-leave-backup-'+stamp()+'.json';
+      document.body.appendChild(a); a.click();
+      setTimeout(function(){ URL.revokeObjectURL(url); a.parentNode&&a.parentNode.removeChild(a); },1500);
+      say('تم تصدير '+cnt(emp)+' موظفًا و'+cnt(lv)+' إجازة إلى ملف في مجلد التنزيلات.');
+    }catch(e){ say('تعذّر التصدير.','bad'); }
+  });
+
+  var pending=null;
+  if(impBtn) impBtn.addEventListener('click',function(){
+    if(pending){
+      lsSet(LS_EMP,pending.employees); lsSet(LS_LV,pending.leaves);
+      var n=cnt(pending.employees), m=cnt(pending.leaves);
+      pending=null; impBtn.textContent='استيراد نسخة';
+      if(db&&db.reload) db.reload();
+      say('تم الاستيراد: '+n+' موظفًا و'+m+' إجازة.');
+      return;
+    }
+    if(impFile){ impFile.value=''; impFile.click(); }
+  });
+
+  if(impFile) impFile.addEventListener('change',function(){
+    var f=impFile.files&&impFile.files[0]; if(!f) return;
+    var rd=new FileReader();
+    rd.onerror=function(){ say('تعذّرت قراءة الملف.','bad'); };
+    rd.onload=function(){
+      try{
+        var j=JSON.parse(String(rd.result));
+        if(!j||typeof j!=='object'||!j.employees||typeof j.employees!=='object') throw new Error('bad');
+        pending={employees:j.employees||{},leaves:(j.leaves&&typeof j.leaves==='object')?j.leaves:{}};
+        impBtn.textContent='تأكيد الاستبدال';
+        say('الملف يحتوي '+cnt(pending.employees)+' موظفًا و'+cnt(pending.leaves)+' إجازة. '+
+            'الاستيراد سيستبدل كل البيانات الموجودة على هذا الجهاز — اضغط «تأكيد الاستبدال» للمتابعة، أو حدّث الصفحة للإلغاء.','bad');
+      }catch(e){ pending=null; say('الملف غير صالح — يجب أن يكون ملف نسخة صادرًا من هذا التطبيق.','bad'); }
+    };
+    rd.readAsText(f);
+  });
+
+  // ===== تسجيل عامل الخدمة (تشغيل دون إنترنت) =====
+  if('serviceWorker' in navigator && location.protocol!=='file:'){
+    window.addEventListener('load',function(){
+      navigator.serviceWorker.register('./sw.js').catch(function(){});
+    });
+  }
+})();
+</script>
+
+</body>
+</html>
